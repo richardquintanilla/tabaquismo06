@@ -1,5 +1,5 @@
 # app_rem.R - Dashboard EMP 2025 - Tabaquismo
-# Richard Quintanilla - VERSIÓN FINAL CON rt_tabla
+# Richard Quintanilla
 
 library(shiny)
 library(shinydashboard)
@@ -23,7 +23,7 @@ library(openxlsx)
 # =====================================================
 
 # Definir rutas posibles
-ruta_datos_1 <- "rem/objetos/rem_tabaquismo_con_indicadores.fst"
+ruta_datos_1 <- "rem/listados/data/rem_tabaquismo_con_indicadores.fst"
 ruta_datos_2 <- "data/rem_tabaquismo_con_indicadores.fst"
 
 # Usar la primera ruta que exista
