@@ -560,8 +560,8 @@ ui <- dashboardPage(
     
     sidebarMenu(
       menuItem("📈 Resumen General", tabName = "resumen"),
-      menuItem("🌎 Mapas Estadísticos", tabName = "mapas"),
-      menuItem("📋 Tablas Resumen", tabName = "tablas"),
+      menuItem("🌎 Mapa Estadístico", tabName = "mapas"),
+      menuItem("📋 Tabla Resumen", tabName = "tablas"),
       menuItem("📥 Descarga de datos", tabName = "descarga")
     ),
     
@@ -680,7 +680,7 @@ ui <- dashboardPage(
                         icon("database", class = "fa-4x", style = "color: #191970;"),
                         br(),
                         h4("📋 Contenido del archivo Excel", style = "color: #191970; margin-top: 15px;"),
-                        p("Este apartado permite descargar un archivo Excel con todas las tablas del dashboard:"),
+                        p("Este apartado permite descargar un archivo Excel con los siguientes datos:"),
                         tags$ul(style = "text-align: left; display: inline-block; margin: 10px auto;",
                                 tags$li(strong("Resumen"), 
                                         " - Datos resumen por comuna"),
