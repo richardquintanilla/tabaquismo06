@@ -3,7 +3,8 @@
 
 library(shiny)
 library(shinydashboard)
-library(tidyverse)
+library(tidyr)
+library(dplyr)
 library(plotly)
 library(lubridate)
 library(reactable)
