@@ -3,8 +3,7 @@
 
 library(shiny)
 library(shinydashboard)
-library(dplyr)
-library(tidyr)
+library(tidyverse)
 library(plotly)
 library(lubridate)
 library(reactable)
@@ -746,11 +745,15 @@ server <- function(input, output, session) {
                       selected = input$comuna_filter)
   })
   
-  ## 2. DATOS FILTRADOS ----
+  ## 2. DATOS FILTRADOS (CORRECCIÓN FINAL) ----
   
   datos_filtrados <- reactive({
-    df <- datos_long %>%
-      filter(sexo != "Ambos", grupo_etario != "Total")
+    df <- datos_long
+    
+    # Si hay filtros de sexo o grupo etario, eliminar "Ambos" y "Total" para no duplicar
+    if(input$sexo_filter != "Todos" || input$grupo_etario_filter != "Todos") {
+      df <- df %>% filter(sexo != "Ambos", grupo_etario != "Total")
+    }
     
     if(input$provincia_filter != "Todas") {
       df <- df %>% filter(nombre_provincia == input$provincia_filter)
@@ -771,52 +774,32 @@ server <- function(input, output, session) {
     df
   })
   
-  ## 3. DATOS PARA MAPAS Y TABLAS ----
+  ## 3. DATOS RESUMEN (PARA MAPAS Y TABLAS) ----
   
-  datos_mapa_tasa <- reactive({
+  datos_resumen <- reactive({
     df <- datos_filtrados()
     
     if(nrow(df) == 0) {
       return(data.frame())
     }
     
+    # Agrupar por código de comuna, provincia y comuna
     df <- df %>%
-      group_by(codigo_comuna, nombre_comuna, nombre_provincia) %>%
+      group_by(codigo_comuna, nombre_provincia, nombre_comuna) %>%
       summarise(
-        Total_Tabaquismo = sum(tabaquismo_cantidad, na.rm = TRUE),
-        Tasa = mean(tasa_por_100k, na.rm = TRUE),
-        poblacion = mean(poblacion, na.rm = TRUE),
+        Tabaquismo = sum(tabaquismo_cantidad, na.rm = TRUE),
+        `Total de EMP` = sum(total_rem_cantidad, na.rm = TRUE),
+        Poblacion = first(poblacion_total),
+        `% del total de EMP` = ifelse(`Total de EMP` > 0, 
+                                      (Tabaquismo / `Total de EMP`) * 100, 
+                                      0),
+        `Tasa x 100.000` = ifelse(Poblacion > 0, 
+                                  (Tabaquismo / Poblacion) * 100000, 
+                                  0),
         .groups = "drop"
       )
     
     df
-  })
-  
-  datos_mapa_porcentaje <- reactive({
-    df <- datos_filtrados()
-    
-    if(nrow(df) == 0) {
-      return(data.frame())
-    }
-    
-    df <- df %>%
-      group_by(codigo_comuna, nombre_comuna, nombre_provincia) %>%
-      summarise(
-        Total_Tabaquismo = sum(tabaquismo_cantidad, na.rm = TRUE),
-        Porcentaje = mean(porcentaje_total, na.rm = TRUE),
-        total_rem_cantidad = mean(total_rem_cantidad, na.rm = TRUE),
-        .groups = "drop"
-      )
-    
-    df
-  })
-  
-  observeEvent(input$clear_filters, {
-    updateSelectInput(session, "provincia_filter", selected = "Todas")
-    updateSelectInput(session, "comuna_filter", selected = "Todas")
-    updateSelectInput(session, "mes_filter", selected = "Todos")
-    updateSelectInput(session, "sexo_filter", selected = "Todos")
-    updateSelectInput(session, "grupo_etario_filter", selected = "Todos")
   })
   
   ## 4. TARJETAS ----
@@ -824,6 +807,11 @@ server <- function(input, output, session) {
   output$tarjeta_total_examenes <- renderUI({
     datos <- datos_filtrados()
     req(datos)
+    
+    # Si NO hay filtros de sexo/grupo etario, sumar solo las desagregaciones (sin "Ambos" ni "Total")
+    if(input$sexo_filter == "Todos" && input$grupo_etario_filter == "Todos") {
+      datos <- datos %>% filter(sexo != "Ambos", grupo_etario != "Total")
+    }
     
     total <- sum(datos$tabaquismo_cantidad, na.rm = TRUE)
     
@@ -838,6 +826,11 @@ server <- function(input, output, session) {
   output$tarjeta_hombres <- renderUI({
     datos <- datos_filtrados()
     req(datos)
+    
+    # Si NO hay filtros de sexo/grupo etario, sumar solo las desagregaciones (sin "Ambos" ni "Total")
+    if(input$sexo_filter == "Todos" && input$grupo_etario_filter == "Todos") {
+      datos <- datos %>% filter(sexo != "Ambos", grupo_etario != "Total")
+    }
     
     total <- sum(datos$tabaquismo_cantidad, na.rm = TRUE)
     total_h <- sum(datos$tabaquismo_cantidad[datos$sexo == "Hombres"], na.rm = TRUE)
@@ -854,6 +847,11 @@ server <- function(input, output, session) {
   output$tarjeta_mujeres <- renderUI({
     datos <- datos_filtrados()
     req(datos)
+    
+    # Si NO hay filtros de sexo/grupo etario, sumar solo las desagregaciones (sin "Ambos" ni "Total")
+    if(input$sexo_filter == "Todos" && input$grupo_etario_filter == "Todos") {
+      datos <- datos %>% filter(sexo != "Ambos", grupo_etario != "Total")
+    }
     
     total <- sum(datos$tabaquismo_cantidad, na.rm = TRUE)
     total_m <- sum(datos$tabaquismo_cantidad[datos$sexo == "Mujeres"], na.rm = TRUE)
@@ -875,6 +873,11 @@ server <- function(input, output, session) {
     
     if(nrow(datos) == 0) {
       return(plotly::plot_ly() %>% layout(title = "No hay datos con los filtros seleccionados"))
+    }
+    
+    # Si NO hay filtros, eliminar "Ambos" y "Total" para no duplicar
+    if(input$sexo_filter == "Todos" && input$grupo_etario_filter == "Todos") {
+      datos <- datos %>% filter(sexo != "Ambos", grupo_etario != "Total")
     }
     
     datos_grafico <- datos %>%
@@ -987,6 +990,11 @@ server <- function(input, output, session) {
       return(plotly::plot_ly() %>% layout(title = "No hay datos con los filtros seleccionados"))
     }
     
+    # Si NO hay filtros, eliminar "Ambos" y "Total" para no duplicar
+    if(input$sexo_filter == "Todos" && input$grupo_etario_filter == "Todos") {
+      datos <- datos %>% filter(sexo != "Ambos", grupo_etario != "Total")
+    }
+    
     meses_orden <- c("Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
                      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre")
     
@@ -1077,7 +1085,7 @@ server <- function(input, output, session) {
   ## 7. MAPAS ----
   
   output$mapa_tasa <- renderPlotly({
-    df_mapa <- datos_mapa_tasa()
+    df_mapa <- datos_resumen()
     req(df_mapa)
     
     if(nrow(df_mapa) == 0) {
@@ -1092,8 +1100,8 @@ server <- function(input, output, session) {
       codigo_comuna = "codigo_comuna",
       nombre_comuna = "nombre_comuna",
       provincia = "nombre_provincia",
-      valor = "Total_Tabaquismo",
-      valor_indicador = "Tasa",
+      valor = "Tabaquismo",
+      valor_indicador = "Tasa x 100.000",
       grupo_etario_label = grupo_label,
       sexo_label = sexo_label,
       titulo_leyenda = "Tasa x 100.000 hab.",
@@ -1103,7 +1111,7 @@ server <- function(input, output, session) {
   })
   
   output$mapa_porcentaje <- renderPlotly({
-    df_mapa <- datos_mapa_porcentaje()
+    df_mapa <- datos_resumen()
     req(df_mapa)
     
     if(nrow(df_mapa) == 0) {
@@ -1118,8 +1126,8 @@ server <- function(input, output, session) {
       codigo_comuna = "codigo_comuna",
       nombre_comuna = "nombre_comuna",
       provincia = "nombre_provincia",
-      valor = "Total_Tabaquismo",
-      valor_indicador = "Porcentaje",
+      valor = "Tabaquismo",
+      valor_indicador = "% del total de EMP",
       grupo_etario_label = grupo_label,
       sexo_label = sexo_label,
       titulo_leyenda = "% del total de EMP",
@@ -1131,7 +1139,7 @@ server <- function(input, output, session) {
   ## 8. TABLAS CON rt_tabla ----
   
   output$tabla_tasa <- renderUI({
-    df <- datos_mapa_tasa()
+    df <- datos_resumen()
     req(df)
     
     if(nrow(df) == 0) {
@@ -1148,9 +1156,9 @@ server <- function(input, output, session) {
       select(
         Provincia = nombre_provincia,
         Comuna = nombre_comuna,
-        `Tabaquismo` = Total_Tabaquismo,
-        Población = poblacion,
-        `Tasa x 100.000` = Tasa
+        `Tabaquismo` = Tabaquismo,
+        `Población` = Poblacion,
+        `Tasa x 100.000` = `Tasa x 100.000`
       ) %>%
       arrange(desc(`Tasa x 100.000`))
     
@@ -1160,21 +1168,21 @@ server <- function(input, output, session) {
         Provincia = "Provincia",
         Comuna = "Comuna",
         `Tabaquismo` = "Tabaquismo",
-        Población = "Población",
+        `Población` = "Población",
         `Tasa x 100.000` = "Tasa x 100.000"
       ),
       filtrar = TRUE,
       decimales = 0,
       decimales_col = list(
         `Tabaquismo` = 0,
-        Población = 0,
+        `Población` = 0,
         `Tasa x 100.000` = 1
       )
     )
   })
   
   output$tabla_porcentaje <- renderUI({
-    df <- datos_mapa_porcentaje()
+    df <- datos_resumen()
     req(df)
     
     if(nrow(df) == 0) {
@@ -1191,9 +1199,9 @@ server <- function(input, output, session) {
       select(
         Provincia = nombre_provincia,
         Comuna = nombre_comuna,
-        `Tabaquismo` = Total_Tabaquismo,
-        `Total de EMP` = total_rem_cantidad,
-        `% del total de EMP` = Porcentaje
+        `Tabaquismo` = Tabaquismo,
+        `Total de EMP` = `Total de EMP`,
+        `% del total de EMP` = `% del total de EMP`
       ) %>%
       arrange(desc(`% del total de EMP`))
     
@@ -1238,38 +1246,11 @@ server <- function(input, output, session) {
       paste0(format(Sys.Date(), "%y%m%d"), "_datos_tabaquismo", ".xlsx")
     },
     content = function(file) {
-      # Obtener datos
-      df_tasa <- datos_mapa_tasa()
-      df_porcentaje <- datos_mapa_porcentaje()
+      # Datos resumen (provincia y comuna)
+      df_resumen <- datos_resumen()
       
-      # Preparar tablas
-      if(nrow(df_tasa) > 0) {
-        tabla_tasa <- df_tasa %>%
-          select(
-            Comuna = nombre_comuna,
-            Provincia = nombre_provincia,
-            Tabaquismo = Total_Tabaquismo,
-            Poblacion = poblacion,
-            Tasa_x_100000 = Tasa
-          ) %>%
-          arrange(desc(Tasa_x_100000))
-      } else {
-        tabla_tasa <- data.frame(Mensaje = "No hay datos con los filtros seleccionados")
-      }
-      
-      if(nrow(df_porcentaje) > 0) {
-        tabla_porcentaje <- df_porcentaje %>%
-          select(
-            Comuna = nombre_comuna,
-            Provincia = nombre_provincia,
-            Tabaquismo = Total_Tabaquismo,
-            Total_de_EMP = total_rem_cantidad,
-            Porcentaje_del_total_de_EMP = Porcentaje
-          ) %>%
-          arrange(desc(Porcentaje_del_total_de_EMP))
-      } else {
-        tabla_porcentaje <- data.frame(Mensaje = "No hay datos con los filtros seleccionados")
-      }
+      # Datos detalle (mes, sexo, grupo etario)
+      df_detalle <- datos_filtrados()
       
       # Metadatos
       metadatos <- data.frame(
@@ -1296,11 +1277,11 @@ server <- function(input, output, session) {
       # Crear libro Excel
       wb <- createWorkbook()
       
-      addWorksheet(wb, "Tasa x 100.000")
-      writeData(wb, "Tasa x 100.000", tabla_tasa)
+      addWorksheet(wb, "Resumen")
+      writeData(wb, "Resumen", df_resumen)
       
-      addWorksheet(wb, "% del total de EMP")
-      writeData(wb, "% del total de EMP", tabla_porcentaje)
+      addWorksheet(wb, "Detalle")
+      writeData(wb, "Detalle", df_detalle)
       
       addWorksheet(wb, "Metadatos")
       writeData(wb, "Metadatos", metadatos)
