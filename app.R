@@ -1,5 +1,5 @@
 # app_rem.R - Dashboard EMP 2025 - Tabaquismo
-# Richard Quintanilla
+# Richard Quintanilla Campos
 
 library(shiny)
 library(shinydashboard)
@@ -801,6 +801,14 @@ server <- function(input, output, session) {
       )
     
     df
+  })
+  
+  observeEvent(input$clear_filters, {
+    updateSelectInput(session, "provincia_filter", selected = "Todas")
+    updateSelectInput(session, "comuna_filter", selected = "Todas")
+    updateSelectInput(session, "mes_filter", selected = "Todos")
+    updateSelectInput(session, "sexo_filter", selected = "Todos")
+    updateSelectInput(session, "grupo_etario_filter", selected = "Todos")
   })
   
   ## 4. TARJETAS ----
