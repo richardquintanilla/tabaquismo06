@@ -567,7 +567,7 @@ ui <- dashboardPage(
     ),
     
     sidebarMenu(
-      menuItem("📈 Resumen General", tabName = "resumen"),
+      menuItem("📊 Resumen General", tabName = "resumen"),
       menuItem("🌎 Mapa Estadístico", tabName = "mapas"),
       menuItem("📋 Tabla Resumen", tabName = "tablas"),
       menuItem("📥 Descarga de datos", tabName = "descarga")
@@ -601,7 +601,7 @@ ui <- dashboardPage(
                 multiple = FALSE,
                 selectize = TRUE),
     
-    selectInput("grupo_etario_filter", "📊 Grupo Etario (en años):",
+    selectInput("grupo_etario_filter", "🧑‍🤝‍🧑 Grupo Etario (en años):",
                 choices = c("Todos", "15-19", "20-24", "25-29", "30-34", 
                             "35-39", "40-44", "45-49", "50-54", "55-59", 
                             "60-64", "65-69", "70-74", "75-79", "80+"), 
