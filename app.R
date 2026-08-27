@@ -67,6 +67,13 @@ formatear_porcentaje <- function(x) {
 }
 
 # =====================================================
+# ORDEN DE MESES (para usar en todo el dashboard)
+# =====================================================
+
+meses_orden <- c("Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
+                 "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre")
+
+# =====================================================
 # FUNCIÓN rt_tabla (COPIADA DE REMASEP)
 # =====================================================
 
@@ -370,11 +377,14 @@ crear_mapa <- function(df_mapa,
   pi <- valor_indicador
   
   df_user <- df_mapa %>% 
-    mutate(codigo_comuna = .data[[cc]], 
-           nombre_comuna = .data[[nn]],
-           provincia = .data[[pp]],
-           valor = .data[[pv]],
-           indicador = .data[[pi]])
+    mutate(
+      codigo_comuna = .data[[cc]], 
+      nombre_comuna = .data[[nn]],
+      provincia = .data[[pp]],
+      valor = .data[[pv]],
+      indicador = .data[[pi]],
+      Total_EMP = Total_EMP
+    )
   
   mapa_sf <- chilemapas::mapa_comunas %>%
     filter(codigo_region == "06")
@@ -437,14 +447,9 @@ crear_mapa <- function(df_mapa,
         TRUE ~ paste0(
           "<b>", nombre_comuna, "</b><br>",
           "Provincia: ", ifelse(is.na(provincia), "Sin dato", provincia), "<br>",
-          label_indicador, ": ", 
-          if(es_porcentaje) {
-            paste0(format(round(indicador, 1), big.mark = ".", decimal.mark = ","), "%")
-          } else {
-            paste0(format(round(indicador, 1), big.mark = ".", decimal.mark = ","), " por 100.000 hab.")
-          },
-          "<br>",
+          "Total EMP: ", format(round(Total_EMP, 0), big.mark = ".", decimal.mark = ","), "<br>",
           "Tabaquismo: ", format(round(valor, 0), big.mark = ".", decimal.mark = ","), "<br>",
+          "% del total de EMP: ", format(round(indicador, 1), big.mark = ".", decimal.mark = ","), "%", "<br>",
           "Grupo Etario: ", grupo_etario_label, "<br>",
           "Sexo: ", sexo_label
         )
@@ -524,9 +529,12 @@ ui <- dashboardPage(
       .custom-box .inner h3 { font-size: 38px; font-weight: bold; margin: 0 0 10px 0; white-space: nowrap; padding: 0; }
       .custom-box .inner p { font-size: 14px; margin: 0; font-weight: bold; }
       .custom-box .icon { position: absolute; right: 10px; top: 10px; font-size: 50px; opacity: 0.3; }
-      .bg-purple-custom { background-color: #7f7f7f; }
-      .bg-gray-custom { background-color: #2596be; }
-      .bg-orange-custom { background-color: #ec3d43; }
+      .bg-purple-custom { background-color: #6f42c1 !important; }
+      .bg-green-custom { background-color: #28a745 !important; }
+      .bg-yellow-custom { background-color: #ffc107 !important; }
+      .bg-gray-custom { background-color: #7f7f7f !important; }
+      .bg-blue-custom { background-color: #2596be !important; }
+      .bg-red-custom { background-color: #ec3d43 !important; }
       .box.box-primary > .box-header { background-color: #191970 !important; color: white !important; }
       .box.box-info > .box-header { background-color: #2c2c8a !important; color: white !important; }
       .selectize-input, .selectize-dropdown { background-color: #ecf0f1 !important; color: #191970 !important; }
@@ -582,9 +590,7 @@ ui <- dashboardPage(
                 selectize = TRUE),
     
     selectInput("mes_filter", "📅 Mes:",
-                choices = c("Todos", "Enero", "Febrero", "Marzo", "Abril", 
-                            "Mayo", "Junio", "Julio", "Agosto", "Septiembre", 
-                            "Octubre", "Noviembre", "Diciembre"), 
+                choices = c("Todos", meses_orden), 
                 selected = "Todos",
                 multiple = FALSE,
                 selectize = TRUE),
@@ -631,24 +637,29 @@ ui <- dashboardPage(
       # =====================================================
       tabItem(tabName = "resumen",
               fluidRow(
-                uiOutput("tarjeta_total_examenes"),
-                uiOutput("tarjeta_hombres"),
-                uiOutput("tarjeta_mujeres")
+                uiOutput("tarjeta_total_emp"),
+                uiOutput("tarjeta_hombres_emp"),
+                uiOutput("tarjeta_mujeres_emp")
               ),
               fluidRow(
-                box(title = "N° Exámenes de Medicina Preventiva por Grupo Etario y Sexo", 
+                uiOutput("tarjeta_total_tabaquismo"),
+                uiOutput("tarjeta_hombres_tabaquismo"),
+                uiOutput("tarjeta_mujeres_tabaquismo")
+              ),
+              fluidRow(
+                box(title = "N° Exámenes de Medicina Preventiva por Grupo Etario y Sexo (Total vs Positivos)", 
                     status = "primary", solidHeader = TRUE, width = 12,
                     plotlyOutput("grafico_etario", height = "400px"))
               ),
               fluidRow(
-                box(title = "N° Exámenes de Medicina Preventiva por Mes y Sexo", 
+                box(title = "N° Exámenes de Medicina Preventiva por Mes y Sexo (Total vs Positivos)", 
                     status = "primary", solidHeader = TRUE, width = 12,
                     plotlyOutput("grafico_mensual", height = "400px"))
               )
       ),
       
       # =====================================================
-      # PESTAÑA 2: MAPAS ESTADÍSTICOS (SOLO MAPA)
+      # PESTAÑA 2: MAPA ESTADÍSTICO
       # =====================================================
       tabItem(tabName = "mapas",
               fluidRow(
@@ -659,11 +670,16 @@ ui <- dashboardPage(
       ),
       
       # =====================================================
-      # PESTAÑA 3: TABLAS RESUMEN (SOLO TABLA)
+      # PESTAÑA 3: TABLA RESUMEN (PROVINCIA + COMUNA)
       # =====================================================
       tabItem(tabName = "tablas",
               fluidRow(
-                box(title = "Tabla de Prevalencia de Tabaquismo - % del total de EMP", 
+                box(title = "Tabla de Prevalencia de Tabaquismo por Provincia y Regional - % del total de EMP", 
+                    status = "primary", solidHeader = TRUE, width = 12,
+                    uiOutput("tabla_resumen_provincia"))
+              ),
+              fluidRow(
+                box(title = "Tabla de Prevalencia de Tabaquismo por Comuna - % del total de EMP", 
                     status = "primary", solidHeader = TRUE, width = 12,
                     uiOutput("tabla_porcentaje"))
               )
@@ -682,10 +698,14 @@ ui <- dashboardPage(
                         h4("📋 Contenido del archivo Excel", style = "color: #191970; margin-top: 15px;"),
                         p("Este apartado permite descargar un archivo Excel con los siguientes datos:"),
                         tags$ul(style = "text-align: left; display: inline-block; margin: 10px auto;",
-                                tags$li(strong("Resumen"), 
+                                tags$li(strong("Resumen por Comuna"), 
                                         " - Datos resumen por comuna"),
-                                tags$li(strong("Detalle"), 
-                                        " - Datos desagregados por mes, sexo y grupo etario"),
+                                tags$li(strong("Resumen por Provincia"), 
+                                        " - Datos resumen por provincia y regional"),
+                                tags$li(strong("Resumen Tarjetas"), 
+                                        " - Valores de las tarjetas del dashboard"),
+                                tags$li(strong("Detalle por Sexo y Grupo Etario"), 
+                                        " - Datos desagregados por sexo y grupo etario"),
                                 tags$li(strong("Metadatos"), 
                                         " - Información sobre filtros aplicados y fecha de corte")
                         ),
@@ -709,8 +729,7 @@ ui <- dashboardPage(
 )
 
 # =====================================================
-# SERVER
-# =====================================================
+# SERVER# =====================================================
 
 server <- function(input, output, session) {
   
@@ -739,13 +758,8 @@ server <- function(input, output, session) {
   datos_filtrados <- reactive({
     df <- datos_long
     
-    # Si NO hay filtros de sexo/grupo etario, mantener TODAS las filas (incluye "Ambos|Total")
-    if(input$sexo_filter == "Todos" && input$grupo_etario_filter == "Todos") {
-      df <- df  # No filtres nada
-    } else {
-      # Si hay filtros, eliminar "Ambos" y "Total" para no duplicar
-      df <- df %>% filter(sexo != "Ambos", grupo_etario != "Total")
-    }
+    # Eliminar "Ambos|Total" 
+    df <- df %>% filter(sexo != "Ambos", grupo_etario != "Total")
     
     if(input$provincia_filter != "Todas") {
       df <- df %>% filter(nombre_provincia == input$provincia_filter)
@@ -766,7 +780,7 @@ server <- function(input, output, session) {
     df
   })
   
-  ## 3. DATOS RESUMEN (PARA MAPAS Y TABLAS) ----
+  ## 3. DATOS RESUMEN (POR COMUNA) ----
   
   datos_resumen <- reactive({
     df <- datos_filtrados()
@@ -775,27 +789,51 @@ server <- function(input, output, session) {
       return(data.frame())
     }
     
-    # Filtrar SOLO la fila "Ambos|Total" (si existe)
-    df <- df %>% filter(sexo == "Ambos", grupo_etario == "Total")
-    
-    # Si no hay filas (porque se filtró por sexo o grupo etario), usar todas las filas
-    if(nrow(df) == 0) {
-      df <- datos_filtrados()
-    }
-    
-    # Agrupar por código de comuna, provincia y comuna
     df <- df %>%
       group_by(codigo_comuna, nombre_provincia, nombre_comuna) %>%
       summarise(
+        Total_EMP = sum(total_rem_cantidad, na.rm = TRUE),
         Tabaquismo = sum(tabaquismo_cantidad, na.rm = TRUE),
-        `Total de EMP` = sum(total_rem_cantidad, na.rm = TRUE),
-        `% del total de EMP` = ifelse(`Total de EMP` > 0, 
-                                      (Tabaquismo / `Total de EMP`) * 100, 
+        `% del total de EMP` = ifelse(Total_EMP > 0, 
+                                      (Tabaquismo / Total_EMP) * 100, 
                                       0),
         .groups = "drop"
       )
     
     df
+  })
+  
+  ## 4. DATOS RESUMEN POR PROVINCIA Y REGIONAL ----
+  
+  datos_resumen_provincia <- reactive({
+    df <- datos_filtrados()
+    
+    if(nrow(df) == 0) {
+      return(data.frame())
+    }
+    
+    df_provincia <- df %>%
+      group_by(nombre_provincia) %>%
+      summarise(
+        Total_EMP = sum(total_rem_cantidad, na.rm = TRUE),
+        Tabaquismo = sum(tabaquismo_cantidad, na.rm = TRUE),
+        `% del total de EMP` = ifelse(Total_EMP > 0, 
+                                      (Tabaquismo / Total_EMP) * 100, 
+                                      0),
+        .groups = "drop"
+      )
+    
+    total_regional <- df %>%
+      summarise(
+        nombre_provincia = "Región de O'Higgins",
+        Total_EMP = sum(total_rem_cantidad, na.rm = TRUE),
+        Tabaquismo = sum(tabaquismo_cantidad, na.rm = TRUE),
+        `% del total de EMP` = ifelse(Total_EMP > 0, 
+                                      (Tabaquismo / Total_EMP) * 100, 
+                                      0)
+      )
+    
+    bind_rows(df_provincia, total_regional)
   })
   
   observeEvent(input$clear_filters, {
@@ -806,70 +844,93 @@ server <- function(input, output, session) {
     updateSelectInput(session, "grupo_etario_filter", selected = "Todos")
   })
   
-  ## 4. TARJETAS ----
+  ## 5. TARJETAS ----
   
-  output$tarjeta_total_examenes <- renderUI({
+  output$tarjeta_total_emp <- renderUI({
     datos <- datos_filtrados()
     req(datos)
     
-    # Si NO hay filtros de sexo/grupo etario, sumar solo las desagregaciones (sin "Ambos" ni "Total")
-    if(input$sexo_filter == "Todos" && input$grupo_etario_filter == "Todos") {
-      datos <- datos %>% filter(sexo != "Ambos", grupo_etario != "Total")
-    }
-    
-    total <- sum(datos$tabaquismo_cantidad, na.rm = TRUE)
+    total <- sum(datos$total_rem_cantidad, na.rm = TRUE)
     
     div(class = "col-sm-4",
         div(class = "custom-box bg-purple-custom",
-            div(class = "icon", icon("stethoscope")),
+            div(class = "icon", icon("hospital")),
             div(class = "inner", 
                 h3(formatear_numero(total)), 
-                p("Total Exámenes (100%)", style = "font-weight: bold;"))))
+                p("Total EMP", style = "font-weight: bold;"))))
   })
   
-  output$tarjeta_hombres <- renderUI({
+  output$tarjeta_hombres_emp <- renderUI({
     datos <- datos_filtrados()
     req(datos)
     
-    # Si NO hay filtros de sexo/grupo etario, sumar solo las desagregaciones (sin "Ambos" ni "Total")
-    if(input$sexo_filter == "Todos" && input$grupo_etario_filter == "Todos") {
-      datos <- datos %>% filter(sexo != "Ambos", grupo_etario != "Total")
-    }
-    
-    total <- sum(datos$tabaquismo_cantidad, na.rm = TRUE)
-    total_h <- sum(datos$tabaquismo_cantidad[datos$sexo == "Hombres"], na.rm = TRUE)
-    pct <- if(total > 0) (total_h / total) * 100 else 0
+    total_h <- sum(datos$total_rem_cantidad[datos$sexo == "Hombres"], na.rm = TRUE)
     
     div(class = "col-sm-4",
-        div(class = "custom-box bg-gray-custom",
+        div(class = "custom-box bg-green-custom",
             div(class = "icon", icon("mars")),
             div(class = "inner", 
                 h3(formatear_numero(total_h)), 
-                p(paste0("Hombres (", formatear_porcentaje(pct), ")"), style = "font-weight: bold;"))))
+                p("Hombres EMP", style = "font-weight: bold;"))))
   })
   
-  output$tarjeta_mujeres <- renderUI({
+  output$tarjeta_mujeres_emp <- renderUI({
     datos <- datos_filtrados()
     req(datos)
     
-    # Si NO hay filtros de sexo/grupo etario, sumar solo las desagregaciones (sin "Ambos" ni "Total")
-    if(input$sexo_filter == "Todos" && input$grupo_etario_filter == "Todos") {
-      datos <- datos %>% filter(sexo != "Ambos", grupo_etario != "Total")
-    }
-    
-    total <- sum(datos$tabaquismo_cantidad, na.rm = TRUE)
-    total_m <- sum(datos$tabaquismo_cantidad[datos$sexo == "Mujeres"], na.rm = TRUE)
-    pct <- if(total > 0) (total_m / total) * 100 else 0
+    total_m <- sum(datos$total_rem_cantidad[datos$sexo == "Mujeres"], na.rm = TRUE)
     
     div(class = "col-sm-4",
-        div(class = "custom-box bg-orange-custom",
+        div(class = "custom-box bg-yellow-custom",
             div(class = "icon", icon("venus")),
             div(class = "inner", 
                 h3(formatear_numero(total_m)), 
-                p(paste0("Mujeres (", formatear_porcentaje(pct), ")"), style = "font-weight: bold;"))))
+                p("Mujeres EMP", style = "font-weight: bold;"))))
   })
   
-  ## 5. GRÁFICO ETARIO ----
+  output$tarjeta_total_tabaquismo <- renderUI({
+    datos <- datos_filtrados()
+    req(datos)
+    
+    total <- sum(datos$tabaquismo_cantidad, na.rm = TRUE)
+    
+    div(class = "col-sm-4",
+        div(class = "custom-box bg-gray-custom",
+            div(class = "icon", icon("smoking")),
+            div(class = "inner", 
+                h3(formatear_numero(total)), 
+                p("Tabaquismo", style = "font-weight: bold;"))))
+  })
+  
+  output$tarjeta_hombres_tabaquismo <- renderUI({
+    datos <- datos_filtrados()
+    req(datos)
+    
+    total_h <- sum(datos$tabaquismo_cantidad[datos$sexo == "Hombres"], na.rm = TRUE)
+    
+    div(class = "col-sm-4",
+        div(class = "custom-box bg-blue-custom",
+            div(class = "icon", icon("mars")),
+            div(class = "inner", 
+                h3(formatear_numero(total_h)), 
+                p("Hombres Tabaquismo", style = "font-weight: bold;"))))
+  })
+  
+  output$tarjeta_mujeres_tabaquismo <- renderUI({
+    datos <- datos_filtrados()
+    req(datos)
+    
+    total_m <- sum(datos$tabaquismo_cantidad[datos$sexo == "Mujeres"], na.rm = TRUE)
+    
+    div(class = "col-sm-4",
+        div(class = "custom-box bg-red-custom",
+            div(class = "icon", icon("venus")),
+            div(class = "inner", 
+                h3(formatear_numero(total_m)), 
+                p("Mujeres Tabaquismo", style = "font-weight: bold;"))))
+  })
+  
+  ## 6. GRÁFICO ETARIO (COMPARATIVO) ----
   
   output$grafico_etario <- renderPlotly({
     datos <- datos_filtrados()
@@ -879,15 +940,11 @@ server <- function(input, output, session) {
       return(plotly::plot_ly() %>% layout(title = "No hay datos con los filtros seleccionados"))
     }
     
-    # Si NO hay filtros, eliminar "Ambos" y "Total" para no duplicar
-    if(input$sexo_filter == "Todos" && input$grupo_etario_filter == "Todos") {
-      datos <- datos %>% filter(sexo != "Ambos", grupo_etario != "Total")
-    }
-    
     datos_grafico <- datos %>%
       group_by(grupo_etario, sexo) %>%
       summarise(
-        Cantidad = sum(tabaquismo_cantidad, na.rm = TRUE),
+        Total_EMP = sum(total_rem_cantidad, na.rm = TRUE),
+        Tabaquismo = sum(tabaquismo_cantidad, na.rm = TRUE),
         .groups = "drop"
       ) %>%
       mutate(
@@ -899,25 +956,10 @@ server <- function(input, output, session) {
       ) %>%
       arrange(grupo_etario)
     
-    max_global <- max(datos_grafico$Cantidad, na.rm = TRUE)
+    max_global <- max(c(datos_grafico$Total_EMP, datos_grafico$Tabaquismo), na.rm = TRUE)
     if(max_global == 0 || !is.finite(max_global)) {
       max_global <- 1
     }
-    
-    datos_grafico <- datos_grafico %>%
-      group_by(grupo_etario) %>%
-      mutate(
-        Total_Grupo = sum(Cantidad, na.rm = TRUE),
-        Hombres_Grupo = sum(Cantidad[sexo == "Hombres"], na.rm = TRUE),
-        Mujeres_Grupo = sum(Cantidad[sexo == "Mujeres"], na.rm = TRUE),
-        Tooltip_Texto = paste0(
-          "<b>Grupo Etario: ", grupo_etario, "</b><br>",
-          "Total: ", formatear_numero(Total_Grupo), "<br>",
-          "Hombres: ", formatear_numero(Hombres_Grupo), "<br>",
-          "Mujeres: ", formatear_numero(Mujeres_Grupo)
-        )
-      ) %>%
-      ungroup()
     
     max_y_redondeado <- ceiling(max_global / 500) * 500
     if(max_y_redondeado == 0) max_y_redondeado <- 500
@@ -930,7 +972,26 @@ server <- function(input, output, session) {
     etiquetas_con_espacio <- paste0("      ", etiquetas_originales)
     
     datos_barras_invisibles <- datos_grafico %>%
-      distinct(grupo_etario, .keep_all = TRUE)
+      group_by(grupo_etario) %>%
+      summarise(
+        Total_Grupo = sum(Total_EMP, na.rm = TRUE),
+        Hombres_Total = sum(Total_EMP[sexo == "Hombres"], na.rm = TRUE),
+        Mujeres_Total = sum(Total_EMP[sexo == "Mujeres"], na.rm = TRUE),
+        Hombres_Tabaquismo = sum(Tabaquismo[sexo == "Hombres"], na.rm = TRUE),
+        Mujeres_Tabaquismo = sum(Tabaquismo[sexo == "Mujeres"], na.rm = TRUE),
+        .groups = "drop"
+      ) %>%
+      mutate(
+        Tooltip_Texto = paste0(
+          "<b>Grupo Etario: ", grupo_etario, "</b><br>",
+          "Total EMP: ", formatear_numero(Total_Grupo), "<br>",
+          "Hombres EMP: ", formatear_numero(Hombres_Total), "<br>",
+          "Mujeres EMP: ", formatear_numero(Mujeres_Total), "<br>",
+          "Tabaquismo: ", formatear_numero(Hombres_Tabaquismo + Mujeres_Tabaquismo), "<br>",
+          "Hombres Tabaquismo: ", formatear_numero(Hombres_Tabaquismo), "<br>",
+          "Mujeres Tabaquismo: ", formatear_numero(Mujeres_Tabaquismo)
+        )
+      )
     
     p <- plot_ly() %>%
       add_trace(
@@ -948,43 +1009,50 @@ server <- function(input, output, session) {
       add_trace(
         data = datos_grafico %>% filter(sexo == "Hombres"),
         x = ~grupo_etario,
-        y = ~Cantidad,
-        name = "Hombres",
+        y = ~Total_EMP,
+        name = "Hombres Total EMP",
         type = "bar",
-        marker = list(color = "#2596be", line = list(color = "black", width = 1)),
-        text = ~formatear_numero(Cantidad),
-        textposition = "outside",
-        textfont = list(size = 10),
-        hoverinfo = "none"
+        marker = list(color = "#28a745")
       ) %>%
       add_trace(
         data = datos_grafico %>% filter(sexo == "Mujeres"),
         x = ~grupo_etario,
-        y = ~Cantidad,
-        name = "Mujeres",
+        y = ~Total_EMP,
+        name = "Mujeres Total EMP",
         type = "bar",
-        marker = list(color = "#ec3d43", line = list(color = "black", width = 1)),
-        text = ~formatear_numero(Cantidad),
-        textposition = "outside",
-        textfont = list(size = 10),
-        hoverinfo = "none"
+        marker = list(color = "#ffc107")
+      ) %>%
+      add_trace(
+        data = datos_grafico %>% filter(sexo == "Hombres"),
+        x = ~grupo_etario,
+        y = ~Tabaquismo,
+        name = "Hombres Tabaquismo",
+        type = "bar",
+        marker = list(color = "#2596be")
+      ) %>%
+      add_trace(
+        data = datos_grafico %>% filter(sexo == "Mujeres"),
+        x = ~grupo_etario,
+        y = ~Tabaquismo,
+        name = "Mujeres Tabaquismo",
+        type = "bar",
+        marker = list(color = "#ec3d43")
       ) %>%
       layout(
         barmode = "group",
         xaxis = list(title = "Grupo Etario (en años)", tickangle = 0,
                      ticktext = etiquetas_con_espacio, tickvals = etiquetas_originales),
-        yaxis = list(title = "N° Exámenes de Medicina Preventiva",
+        yaxis = list(title = "N° Exámenes",
                      tickvals = tick_vals, ticktext = tick_text, range = c(0, max_y_con_offset)),
         legend = list(orientation = "v", x = 1.02, y = 0.5, xanchor = "left", yanchor = "middle"),
         margin = list(l = 50, r = 100, t = 30, b = 50),
-        hovermode = "x",
-        hoverlabel = list(bgcolor = "white", font = list(color = "black", size = 12), bordercolor = "gray", namelength = -1)
+        hoverlabel = list(bgcolor = "white", font = list(color = "black", size = 12))
       )
     
     p
   })
   
-  ## 6. GRÁFICO MENSUAL ----
+  ## 7. GRÁFICO MENSUAL (COMPARATIVO) ----
   
   output$grafico_mensual <- renderPlotly({
     datos <- datos_filtrados()
@@ -994,43 +1062,18 @@ server <- function(input, output, session) {
       return(plotly::plot_ly() %>% layout(title = "No hay datos con los filtros seleccionados"))
     }
     
-    # Si NO hay filtros, eliminar "Ambos" y "Total" para no duplicar
-    if(input$sexo_filter == "Todos" && input$grupo_etario_filter == "Todos") {
-      datos <- datos %>% filter(sexo != "Ambos", grupo_etario != "Total")
-    }
-    
-    meses_orden <- c("Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
-                     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre")
-    
     datos_mensual <- datos %>%
       group_by(nombre_mes, sexo) %>%
       summarise(
-        Cantidad = sum(tabaquismo_cantidad, na.rm = TRUE),
+        Total_EMP = sum(total_rem_cantidad, na.rm = TRUE),
+        Tabaquismo = sum(tabaquismo_cantidad, na.rm = TRUE),
         .groups = "drop"
       ) %>%
       mutate(nombre_mes = factor(nombre_mes, levels = meses_orden)) %>%
       arrange(nombre_mes)
     
-    max_y <- max(datos_mensual$Cantidad, na.rm = TRUE)
+    max_y <- max(c(datos_mensual$Total_EMP, datos_mensual$Tabaquismo), na.rm = TRUE)
     if(max_y == 0 || !is.finite(max_y)) max_y <- 1
-    
-    datos_mensual <- datos_mensual %>%
-      group_by(nombre_mes) %>%
-      mutate(
-        Total_Mes = sum(Cantidad, na.rm = TRUE),
-        Hombres_Mes = sum(Cantidad[sexo == "Hombres"], na.rm = TRUE),
-        Mujeres_Mes = sum(Cantidad[sexo == "Mujeres"], na.rm = TRUE)
-      ) %>%
-      ungroup() %>%
-      mutate(
-        Cantidad_Texto = formatear_numero(Cantidad),
-        Tooltip_Texto = paste0(
-          "<b>", nombre_mes, "</b><br>",
-          "Total: ", formatear_numero(Total_Mes), "<br>",
-          "Hombres: ", formatear_numero(Hombres_Mes), "<br>",
-          "Mujeres: ", formatear_numero(Mujeres_Mes)
-        )
-      )
     
     max_y_redondeado <- ceiling(max_y / 500) * 500
     if(max_y_redondeado == 0) max_y_redondeado <- 500
@@ -1040,53 +1083,92 @@ server <- function(input, output, session) {
     tick_text <- formatear_numero(tick_vals)
     
     datos_barras <- datos_mensual %>%
-      select(nombre_mes, Tooltip_Texto) %>%
-      distinct()
+      group_by(nombre_mes) %>%
+      summarise(
+        Total_Mes = sum(Total_EMP, na.rm = TRUE),
+        Hombres_Total = sum(Total_EMP[sexo == "Hombres"], na.rm = TRUE),
+        Mujeres_Total = sum(Total_EMP[sexo == "Mujeres"], na.rm = TRUE),
+        Hombres_Tabaquismo = sum(Tabaquismo[sexo == "Hombres"], na.rm = TRUE),
+        Mujeres_Tabaquismo = sum(Tabaquismo[sexo == "Mujeres"], na.rm = TRUE),
+        .groups = "drop"
+      ) %>%
+      mutate(
+        Tooltip_Texto = paste0(
+          "<b>", nombre_mes, "</b><br>",
+          "Total EMP: ", formatear_numero(Total_Mes), "<br>",
+          "Hombres EMP: ", formatear_numero(Hombres_Total), "<br>",
+          "Mujeres EMP: ", formatear_numero(Mujeres_Total), "<br>",
+          "Tabaquismo: ", formatear_numero(Hombres_Tabaquismo + Mujeres_Tabaquismo), "<br>",
+          "Hombres Tabaquismo: ", formatear_numero(Hombres_Tabaquismo), "<br>",
+          "Mujeres Tabaquismo: ", formatear_numero(Mujeres_Tabaquismo)
+        )
+      )
     
     p <- plot_ly() %>%
       add_trace(
+        data = datos_barras,
+        x = ~nombre_mes,
+        y = ~max_y,
+        name = "Zona Hover",
+        type = "bar",
+        opacity = 0,
+        hoverinfo = "text",
+        text = ~Tooltip_Texto,
+        showlegend = FALSE
+      ) %>%
+      add_trace(
         data = datos_mensual %>% filter(sexo == "Hombres"),
-        x = ~nombre_mes, y = ~Cantidad,
-        name = "Hombres",
-        type = "scatter", mode = "lines+markers",
-        line = list(color = "#2596be", width = 2),
-        marker = list(color = "#2596be", size = 8),
-        text = ~Cantidad_Texto, textposition = "top center",
-        textfont = list(size = 10), hoverinfo = "none", showlegend = TRUE
+        x = ~nombre_mes,
+        y = ~Total_EMP,
+        name = "Hombres Total EMP",
+        type = "scatter",
+        mode = "lines+markers",
+        line = list(color = "#28a745"),
+        marker = list(color = "#28a745")
       ) %>%
       add_trace(
         data = datos_mensual %>% filter(sexo == "Mujeres"),
-        x = ~nombre_mes, y = ~Cantidad,
-        name = "Mujeres",
-        type = "scatter", mode = "lines+markers",
-        line = list(color = "#ec3d43", width = 2),
-        marker = list(color = "#ec3d43", size = 8),
-        text = ~Cantidad_Texto, textposition = "top center",
-        textfont = list(size = 10), hoverinfo = "none", showlegend = TRUE
+        x = ~nombre_mes,
+        y = ~Total_EMP,
+        name = "Mujeres Total EMP",
+        type = "scatter",
+        mode = "lines+markers",
+        line = list(color = "#ffc107"),
+        marker = list(color = "#ffc107")
       ) %>%
       add_trace(
-        data = datos_barras,
-        x = ~nombre_mes, y = ~max_y,
-        name = "Total",
-        type = "bar", opacity = 0,
-        hoverinfo = "text", text = ~Tooltip_Texto,
-        showlegend = FALSE
+        data = datos_mensual %>% filter(sexo == "Hombres"),
+        x = ~nombre_mes,
+        y = ~Tabaquismo,
+        name = "Hombres Tabaquismo",
+        type = "scatter",
+        mode = "lines+markers",
+        line = list(color = "#2596be"),
+        marker = list(color = "#2596be")
+      ) %>%
+      add_trace(
+        data = datos_mensual %>% filter(sexo == "Mujeres"),
+        x = ~nombre_mes,
+        y = ~Tabaquismo,
+        name = "Mujeres Tabaquismo",
+        type = "scatter",
+        mode = "lines+markers",
+        line = list(color = "#ec3d43"),
+        marker = list(color = "#ec3d43")
       ) %>%
       layout(
         xaxis = list(title = "Mes", categoryorder = "array", categoryarray = meses_orden),
-        yaxis = list(title = "N° Exámenes de Medicina Preventiva",
+        yaxis = list(title = "N° Exámenes",
                      tickvals = tick_vals, ticktext = tick_text, range = c(0, max_y_con_offset)),
         legend = list(orientation = "v", x = 1.02, y = 0.5, xanchor = "left", yanchor = "middle"),
         margin = list(l = 50, r = 100, t = 30, b = 50),
-        hovermode = "x",
-        hoverlabel = list(bgcolor = "white", font = list(color = "black", size = 12), bordercolor = "gray", namelength = -1),
-        barmode = "group"
+        hoverlabel = list(bgcolor = "white", font = list(color = "black", size = 12))
       )
     
     p
   })
   
-  ## 7. MAPA DE PORCENTAJE (SOLO ESTE) ----
+  ## 8. MAPA DE PORCENTAJE ----
   
   output$mapa_porcentaje <- renderPlotly({
     df_mapa <- datos_resumen()
@@ -1114,7 +1196,7 @@ server <- function(input, output, session) {
     )
   })
   
-  ## 8. TABLA DE PORCENTAJE (SOLO ESTA) ----
+  ## 9. TABLA POR COMUNA ----
   
   output$tabla_porcentaje <- renderUI({
     df <- datos_resumen()
@@ -1134,8 +1216,8 @@ server <- function(input, output, session) {
       select(
         Provincia = nombre_provincia,
         Comuna = nombre_comuna,
+        `Total EMP` = Total_EMP,
         `Tabaquismo` = Tabaquismo,
-        `Total de EMP` = `Total de EMP`,
         `% del total de EMP` = `% del total de EMP`
       ) %>%
       arrange(desc(`% del total de EMP`))
@@ -1145,21 +1227,64 @@ server <- function(input, output, session) {
       titulos = list(
         Provincia = "Provincia",
         Comuna = "Comuna",
+        `Total EMP` = "Total EMP",
         `Tabaquismo` = "Tabaquismo",
-        `Total de EMP` = "Total de EMP",
         `% del total de EMP` = "% del total de EMP"
       ),
       filtrar = TRUE,
       decimales = 0,
       decimales_col = list(
+        `Total EMP` = 0,
         `Tabaquismo` = 0,
-        `Total de EMP` = 0,
         `% del total de EMP` = 1
       )
     )
   })
   
-  ## 9. DESCARGA ----
+  ## 10. TABLA POR PROVINCIA Y REGIONAL ----
+  
+  output$tabla_resumen_provincia <- renderUI({
+    df <- datos_resumen_provincia()
+    req(df)
+    
+    if(nrow(df) == 0) {
+      return(reactable(
+        data.frame(Mensaje = "No hay datos con los filtros seleccionados"),
+        columns = list(Mensaje = colDef(name = "", align = "center")),
+        defaultColDef = colDef(
+          headerStyle = list(backgroundColor = "#191970", color = "white", fontWeight = "bold")
+        )
+      ))
+    }
+    
+    tabla <- df %>%
+      select(
+        Provincia = nombre_provincia,
+        `Total EMP` = Total_EMP,
+        `Tabaquismo` = Tabaquismo,
+        `% del total de EMP` = `% del total de EMP`
+      ) %>%
+      arrange(desc(`Total EMP`))
+    
+    rt_tabla(
+      tabla,
+      titulos = list(
+        Provincia = "Provincia",
+        `Total EMP` = "Total EMP",
+        `Tabaquismo` = "Tabaquismo",
+        `% del total de EMP` = "% del total de EMP"
+      ),
+      filtrar = FALSE,
+      decimales = 0,
+      decimales_col = list(
+        `Total EMP` = 0,
+        `Tabaquismo` = 0,
+        `% del total de EMP` = 1
+      )
+    )
+  })
+  
+  ## 11. DESCARGA ----
   
   output$desc_filtros <- renderText({
     filtros <- c()
@@ -1181,13 +1306,50 @@ server <- function(input, output, session) {
       paste0(format(Sys.Date(), "%y%m%d"), "_datos_tabaquismo", ".xlsx")
     },
     content = function(file) {
-      # Datos resumen (provincia y comuna)
       df_resumen <- datos_resumen()
+      df_resumen_provincia <- datos_resumen_provincia()
+      df_tarjetas <- datos_filtrados()
       
-      # Datos detalle (mes, sexo, grupo etario)
-      df_detalle <- datos_filtrados()
+      df_detalle_etario <- datos_filtrados() %>%
+        group_by(sexo, grupo_etario) %>%
+        summarise(
+          Total_EMP = sum(total_rem_cantidad, na.rm = TRUE),
+          Tabaquismo = sum(tabaquismo_cantidad, na.rm = TRUE),
+          `% del total de EMP` = ifelse(Total_EMP > 0, 
+                                        (Tabaquismo / Total_EMP) * 100, 
+                                        0),
+          .groups = "drop"
+        )
       
-      # Metadatos
+      # CORRECCIÓN: Ordenar por mes cronológicamente
+      df_detalle_mes <- datos_filtrados() %>%
+        group_by(nombre_mes, sexo) %>%
+        summarise(
+          Total_EMP = sum(total_rem_cantidad, na.rm = TRUE),
+          Tabaquismo = sum(tabaquismo_cantidad, na.rm = TRUE),
+          `% del total de EMP` = ifelse(Total_EMP > 0, 
+                                        (Tabaquismo / Total_EMP) * 100, 
+                                        0),
+          .groups = "drop"
+        ) %>%
+        # Convertir a factor con el orden correcto
+        mutate(nombre_mes = factor(nombre_mes, levels = meses_orden)) %>%
+        arrange(nombre_mes) %>%
+        # Convertir de vuelta a character para que se vea bien en Excel
+        mutate(nombre_mes = as.character(nombre_mes))
+      
+      resumen_tarjetas <- data.frame(
+        Variable = c("Total EMP", "Hombres EMP", "Mujeres EMP", "Tabaquismo", "Hombres Tabaquismo", "Mujeres Tabaquismo"),
+        Valor = c(
+          sum(df_tarjetas$total_rem_cantidad, na.rm = TRUE),
+          sum(df_tarjetas$total_rem_cantidad[df_tarjetas$sexo == "Hombres"], na.rm = TRUE),
+          sum(df_tarjetas$total_rem_cantidad[df_tarjetas$sexo == "Mujeres"], na.rm = TRUE),
+          sum(df_tarjetas$tabaquismo_cantidad, na.rm = TRUE),
+          sum(df_tarjetas$tabaquismo_cantidad[df_tarjetas$sexo == "Hombres"], na.rm = TRUE),
+          sum(df_tarjetas$tabaquismo_cantidad[df_tarjetas$sexo == "Mujeres"], na.rm = TRUE)
+        )
+      )
+      
       metadatos <- data.frame(
         Campo = c(
           "Fecha de corte",
@@ -1209,24 +1371,31 @@ server <- function(input, output, session) {
         )
       )
       
-      # Crear libro Excel
       wb <- createWorkbook()
       
-      addWorksheet(wb, "Resumen")
-      writeData(wb, "Resumen", df_resumen)
+      addWorksheet(wb, "Resumen por Comuna")
+      writeData(wb, "Resumen por Comuna", df_resumen)
       
-      addWorksheet(wb, "Detalle")
-      writeData(wb, "Detalle", df_detalle)
+      addWorksheet(wb, "Resumen por Provincia")
+      writeData(wb, "Resumen por Provincia", df_resumen_provincia)
+      
+      addWorksheet(wb, "Resumen Tarjetas")
+      writeData(wb, "Resumen Tarjetas", resumen_tarjetas)
+      
+      addWorksheet(wb, "Detalle por Sexo y Grupo")
+      writeData(wb, "Detalle por Sexo y Grupo", df_detalle_etario)
+      
+      addWorksheet(wb, "Detalle por Mes y Sexo")
+      writeData(wb, "Detalle por Mes y Sexo", df_detalle_mes)
       
       addWorksheet(wb, "Metadatos")
       writeData(wb, "Metadatos", metadatos)
       
-      # Guardar
       saveWorkbook(wb, file)
     }
   )
   
-  ## 10. FECHA DE CORTE ----
+  ## 12. FECHA DE CORTE ----
   
   output$fecha_corte_header <- renderText({
     paste("📅 Fecha de corte:", format(fecha_corte, "%d-%m-%Y"))
