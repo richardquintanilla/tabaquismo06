@@ -698,6 +698,8 @@ ui <- dashboardPage(
                         h4("📋 Contenido del archivo Excel", style = "color: #191970; margin-top: 15px;"),
                         p("Este apartado permite descargar un archivo Excel con los siguientes datos:"),
                         tags$ul(style = "text-align: left; display: inline-block; margin: 10px auto;",
+                                tags$li(strong("Metadatos"), 
+                                        " - Información sobre filtros aplicados y fecha de corte"),
                                 tags$li(strong("Resumen por Comuna"), 
                                         " - Datos resumen por comuna"),
                                 tags$li(strong("Resumen por Provincia"), 
@@ -705,9 +707,8 @@ ui <- dashboardPage(
                                 tags$li(strong("Resumen Tarjetas"), 
                                         " - Valores de las tarjetas del dashboard"),
                                 tags$li(strong("Detalle por Sexo y Grupo Etario"), 
-                                        " - Datos desagregados por sexo y grupo etario"),
-                                tags$li(strong("Metadatos"), 
-                                        " - Información sobre filtros aplicados y fecha de corte")
+                                        " - Datos desagregados por sexo y grupo etario")
+                                
                         ),
                         
                         br(),
@@ -1373,6 +1374,9 @@ server <- function(input, output, session) {
       
       wb <- createWorkbook()
       
+      addWorksheet(wb, "Metadatos")
+      writeData(wb, "Metadatos", metadatos)
+      
       addWorksheet(wb, "Resumen por Comuna")
       writeData(wb, "Resumen por Comuna", df_resumen)
       
@@ -1387,9 +1391,6 @@ server <- function(input, output, session) {
       
       addWorksheet(wb, "Detalle por Mes y Sexo")
       writeData(wb, "Detalle por Mes y Sexo", df_detalle_mes)
-      
-      addWorksheet(wb, "Metadatos")
-      writeData(wb, "Metadatos", metadatos)
       
       saveWorkbook(wb, file)
     }
