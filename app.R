@@ -707,15 +707,14 @@ ui <- dashboardPage(
                                 tags$li(strong("Resumen Tarjetas"), 
                                         " - Valores de las tarjetas del dashboard"),
                                 tags$li(strong("Detalle por Sexo y Grupo Etario"), 
-                                        " - Datos desagregados por sexo y grupo etario")
-                                
+                                        " - Datos desagregados por sexo y grupo etario"),
+                                tags$li(strong("Detalle por Mes y Sexo"), 
+                                        " - Datos desagregados por mes y sexo")
                         ),
-                        
                         br(),
                         p("Los datos incluyen los filtros actualmente seleccionados:", 
                           style = "font-weight: bold;"),
                         p(textOutput("desc_filtros"), style = "color: #555;"),
-                        
                         br(),
                         downloadButton("descargar_excel", 
                                        "Descargar Excel", 
@@ -1304,53 +1303,62 @@ server <- function(input, output, session) {
   
   output$descargar_excel <- downloadHandler(
     filename = function() {
-      paste0(format(Sys.Date(), "%y%m%d"), "_datos_tabaquismo", ".xlsx")
+      paste0(format(Sys.Date(), "%y%m%d"), "_datos_tabaquismo.xlsx")
     },
     content = function(file) {
+      df <- datos_filtrados()
       df_resumen <- datos_resumen()
       df_resumen_provincia <- datos_resumen_provincia()
-      df_tarjetas <- datos_filtrados()
       
-      df_detalle_etario <- datos_filtrados() %>%
+      # Detalle por sexo y grupo
+      df_detalle_etario <- df %>%
         group_by(sexo, grupo_etario) %>%
         summarise(
-          Total_EMP = sum(total_rem_cantidad, na.rm = TRUE),
+          `Total EMP` = sum(total_rem_cantidad, na.rm = TRUE),
           Tabaquismo = sum(tabaquismo_cantidad, na.rm = TRUE),
-          `% del total de EMP` = ifelse(Total_EMP > 0, 
-                                        (Tabaquismo / Total_EMP) * 100, 
-                                        0),
-          .groups = "drop"
-        )
-      
-      # CORRECCIÓN: Ordenar por mes cronológicamente
-      df_detalle_mes <- datos_filtrados() %>%
-        group_by(nombre_mes, sexo) %>%
-        summarise(
-          Total_EMP = sum(total_rem_cantidad, na.rm = TRUE),
-          Tabaquismo = sum(tabaquismo_cantidad, na.rm = TRUE),
-          `% del total de EMP` = ifelse(Total_EMP > 0, 
-                                        (Tabaquismo / Total_EMP) * 100, 
+          `% del total de EMP` = ifelse(`Total EMP` > 0, 
+                                        (Tabaquismo / `Total EMP`) * 100, 
                                         0),
           .groups = "drop"
         ) %>%
-        # Convertir a factor con el orden correcto
+        rename(
+          Sexo = sexo,
+          `Grupo Etario` = grupo_etario
+        )
+      
+      # Detalle por mes y sexo
+      df_detalle_mes <- df %>%
+        group_by(nombre_mes, sexo) %>%
+        summarise(
+          `Total EMP` = sum(total_rem_cantidad, na.rm = TRUE),
+          Tabaquismo = sum(tabaquismo_cantidad, na.rm = TRUE),
+          `% del total de EMP` = ifelse(`Total EMP` > 0, 
+                                        (Tabaquismo / `Total EMP`) * 100, 
+                                        0),
+          .groups = "drop"
+        ) %>%
         mutate(nombre_mes = factor(nombre_mes, levels = meses_orden)) %>%
         arrange(nombre_mes) %>%
-        # Convertir de vuelta a character para que se vea bien en Excel
-        mutate(nombre_mes = as.character(nombre_mes))
+        mutate(nombre_mes = as.character(nombre_mes)) %>%
+        rename(
+          Mes = nombre_mes,
+          Sexo = sexo
+        )
       
+      # Resumen tarjetas
       resumen_tarjetas <- data.frame(
-        Variable = c("Total EMP", "Hombres EMP", "Mujeres EMP", "Tabaquismo", "Hombres Tabaquismo", "Mujeres Tabaquismo"),
-        Valor = c(
-          sum(df_tarjetas$total_rem_cantidad, na.rm = TRUE),
-          sum(df_tarjetas$total_rem_cantidad[df_tarjetas$sexo == "Hombres"], na.rm = TRUE),
-          sum(df_tarjetas$total_rem_cantidad[df_tarjetas$sexo == "Mujeres"], na.rm = TRUE),
-          sum(df_tarjetas$tabaquismo_cantidad, na.rm = TRUE),
-          sum(df_tarjetas$tabaquismo_cantidad[df_tarjetas$sexo == "Hombres"], na.rm = TRUE),
-          sum(df_tarjetas$tabaquismo_cantidad[df_tarjetas$sexo == "Mujeres"], na.rm = TRUE)
+        Indicador = c("Total EMP", "Hombres EMP", "Mujeres EMP", "Tabaquismo", "Hombres Tabaquismo", "Mujeres Tabaquismo"),
+        Cantidad = c(
+          sum(df$total_rem_cantidad, na.rm = TRUE),
+          sum(df$total_rem_cantidad[df$sexo == "Hombres"], na.rm = TRUE),
+          sum(df$total_rem_cantidad[df$sexo == "Mujeres"], na.rm = TRUE),
+          sum(df$tabaquismo_cantidad, na.rm = TRUE),
+          sum(df$tabaquismo_cantidad[df$sexo == "Hombres"], na.rm = TRUE),
+          sum(df$tabaquismo_cantidad[df$sexo == "Mujeres"], na.rm = TRUE)
         )
       )
       
+      # Metadatos
       metadatos <- data.frame(
         Campo = c(
           "Fecha de corte",
