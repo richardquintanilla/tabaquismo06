@@ -589,6 +589,14 @@ ui <- dashboardPage(
                 multiple = FALSE,
                 selectize = TRUE),
     
+    selectInput("grupo_etario_filter", "🧑‍🤝‍🧑 Grupo Etario (en años):",
+                choices = c("Todos", "15-19", "20-24", "25-29", "30-34", 
+                            "35-39", "40-44", "45-49", "50-54", "55-59", 
+                            "60-64", "65-69", "70-74", "75-79", "80+"), 
+                selected = "Todos",
+                multiple = FALSE,
+                selectize = TRUE),
+    
     selectInput("mes_filter", "📅 Mes:",
                 choices = c("Todos", meses_orden), 
                 selected = "Todos",
@@ -597,14 +605,6 @@ ui <- dashboardPage(
     
     selectInput("sexo_filter", "👤 Sexo:",
                 choices = c("Todos", "Hombres", "Mujeres"), 
-                selected = "Todos",
-                multiple = FALSE,
-                selectize = TRUE),
-    
-    selectInput("grupo_etario_filter", "🧑‍🤝‍🧑 Grupo Etario (en años):",
-                choices = c("Todos", "15-19", "20-24", "25-29", "30-34", 
-                            "35-39", "40-44", "45-49", "50-54", "55-59", 
-                            "60-64", "65-69", "70-74", "75-79", "80+"), 
                 selected = "Todos",
                 multiple = FALSE,
                 selectize = TRUE),
