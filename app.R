@@ -813,7 +813,22 @@ server <- function(input, output, session) {
   ## 4. DATOS RESUMEN POR PROVINCIA Y REGIONAL ----
   
   datos_resumen_provincia <- reactive({
-    df <- datos_filtrados()
+    # Usar datos filtrados SOLO por mes, sexo y grupo_etario
+    df <- datos_long %>%
+      filter(sexo != "Ambos", grupo_etario != "Total")
+    
+    # Aplicar SOLO filtros que no rompan la lógica de provincia
+    if(input$mes_filter != "Todos") {
+      df <- df %>% filter(nombre_mes == input$mes_filter)
+    }
+    if(input$sexo_filter != "Todos") {
+      df <- df %>% filter(sexo == input$sexo_filter)
+    }
+    if(input$grupo_etario_filter != "Todos") {
+      df <- df %>% filter(grupo_etario == input$grupo_etario_filter)
+    }
+    
+    # NO filtrar por provincia ni comuna (para mantener el contexto regional)
     
     if(nrow(df) == 0) {
       return(data.frame())
@@ -1264,7 +1279,7 @@ server <- function(input, output, session) {
         `Tabaquismo` = "Tabaquismo",
         `% del total de EMP` = "% del total de EMP"
       ),
-      filtrar = TRUE,
+      filtrar = FALSE,
       decimales = 0,
       decimales_col = list(
         `Total EMP` = 0,
