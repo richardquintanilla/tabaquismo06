@@ -546,7 +546,6 @@ ui <- dashboardPage(
       .box.box-info > .box-header { background-color: #2c2c8a !important; color: white !important; }
       .selectize-input, .selectize-dropdown { background-color: #ecf0f1 !important; color: #191970 !important; }
       
-      /* CORRECCIÓN 1: Encabezado fijo en reactable */
       .reactable { overflow-y: auto !important; max-height: 600px; }
       .reactable .rt-thead {
         position: sticky !important;
@@ -564,6 +563,11 @@ ui <- dashboardPage(
       .sidebar-menu > li.active > a {border-left-color: #ff0000 !important;}
       .sidebar-menu > li > a:hover {border-left-color: transparent !important; background-color: #EEE9E9 !important; color: #191970 !important;}
       .skin-blue .main-header .sidebar-toggle:hover {background-color: #EEE9E9 !important;}
+      
+      .form-group { margin-bottom: 8px !important; }
+      .shiny-input-container { margin-bottom: 5px !important; }
+      hr { margin: 8px 0 !important; }
+      h4 { margin-bottom: 8px !important; }
     ")),
     
     div(style = "display: flex; justify-content: center; align-items: center; gap: 15px; padding: 0 0 0 0; margin: 0; margin-top: 10px;",
