@@ -366,6 +366,9 @@ crear_mapa <- function(df_mapa,
                        valor, valor_indicador,
                        grupo_etario_label = "Todos",
                        sexo_label = "Ambos",
+                       mes_label = "Todos",
+                       provincia_label = "Todas",
+                       comuna_label = "Todas",
                        titulo_leyenda = "Tasa x 100.000 hab.",
                        label_indicador = "Tasa",
                        es_porcentaje = FALSE) 
@@ -442,16 +445,20 @@ crear_mapa <- function(df_mapa,
         !activa ~ paste0(
           "<b>", nombre_comuna, "</b><br>",
           "Provincia: ", ifelse(is.na(provincia), "Sin dato", provincia), "<br>",
+          "Mes: ", mes_label, "<br>",
+          "Grupo Etario: ", grupo_etario_label, "<br>",
+          "Sexo: ", sexo_label, "<br>",
           "Sin datos para los filtros seleccionados"
         ),
         TRUE ~ paste0(
           "<b>", nombre_comuna, "</b><br>",
           "Provincia: ", ifelse(is.na(provincia), "Sin dato", provincia), "<br>",
+          "Mes: ", mes_label, "<br>",
+          "Grupo Etario: ", grupo_etario_label, "<br>",
+          "Sexo: ", sexo_label, "<br>",
           "Total EMP: ", format(round(Total_EMP, 0), big.mark = ".", decimal.mark = ","), "<br>",
           "Tabaquismo: ", format(round(valor, 0), big.mark = ".", decimal.mark = ","), "<br>",
-          "% del total de EMP: ", format(round(indicador, 1), big.mark = ".", decimal.mark = ","), "%", "<br>",
-          "Grupo Etario: ", grupo_etario_label, "<br>",
-          "Sexo: ", sexo_label
+          "% del total de EMP: ", format(round(indicador, 1), big.mark = ".", decimal.mark = ","), "%"
         )
       )
     )
@@ -940,6 +947,12 @@ server <- function(input, output, session) {
       return(plotly::plot_ly() %>% layout(title = "No hay datos con los filtros seleccionados"))
     }
     
+    # Obtener etiquetas de filtros para el tooltip
+    mes_label <- if(input$mes_filter == "Todos") "Todos" else input$mes_filter
+    sexo_label <- if(input$sexo_filter == "Todos") "Todos" else input$sexo_filter
+    provincia_label <- if(input$provincia_filter == "Todas") "Todas" else input$provincia_filter
+    comuna_label <- if(input$comuna_filter == "Todas") "Todas" else input$comuna_filter
+    
     datos_grafico <- datos %>%
       group_by(grupo_etario, sexo) %>%
       summarise(
@@ -989,7 +1002,11 @@ server <- function(input, output, session) {
           "Mujeres EMP: ", formatear_numero(Mujeres_Total), "<br>",
           "Tabaquismo: ", formatear_numero(Hombres_Tabaquismo + Mujeres_Tabaquismo), "<br>",
           "Hombres Tabaquismo: ", formatear_numero(Hombres_Tabaquismo), "<br>",
-          "Mujeres Tabaquismo: ", formatear_numero(Mujeres_Tabaquismo)
+          "Mujeres Tabaquismo: ", formatear_numero(Mujeres_Tabaquismo), "<br>",
+          "Mes: ", mes_label, "<br>",
+          "Provincia: ", provincia_label, "<br>",
+          "Comuna: ", comuna_label, "<br>",
+          "Sexo: ", sexo_label
         )
       )
     
@@ -1062,6 +1079,12 @@ server <- function(input, output, session) {
       return(plotly::plot_ly() %>% layout(title = "No hay datos con los filtros seleccionados"))
     }
     
+    # Obtener etiquetas de filtros para el tooltip
+    sexo_label <- if(input$sexo_filter == "Todos") "Todos" else input$sexo_filter
+    provincia_label <- if(input$provincia_filter == "Todas") "Todas" else input$provincia_filter
+    comuna_label <- if(input$comuna_filter == "Todas") "Todas" else input$comuna_filter
+    grupo_label <- if(input$grupo_etario_filter == "Todos") "Todos" else input$grupo_etario_filter
+    
     datos_mensual <- datos %>%
       group_by(nombre_mes, sexo) %>%
       summarise(
@@ -1100,7 +1123,11 @@ server <- function(input, output, session) {
           "Mujeres EMP: ", formatear_numero(Mujeres_Total), "<br>",
           "Tabaquismo: ", formatear_numero(Hombres_Tabaquismo + Mujeres_Tabaquismo), "<br>",
           "Hombres Tabaquismo: ", formatear_numero(Hombres_Tabaquismo), "<br>",
-          "Mujeres Tabaquismo: ", formatear_numero(Mujeres_Tabaquismo)
+          "Mujeres Tabaquismo: ", formatear_numero(Mujeres_Tabaquismo), "<br>",
+          "Provincia: ", provincia_label, "<br>",
+          "Comuna: ", comuna_label, "<br>",
+          "Sexo: ", sexo_label, "<br>",
+          "Grupo Etario: ", grupo_label
         )
       )
     
@@ -1180,6 +1207,9 @@ server <- function(input, output, session) {
     
     grupo_label <- if(input$grupo_etario_filter == "Todos") "Todos" else input$grupo_etario_filter
     sexo_label <- if(input$sexo_filter == "Todos") "Ambos sexos" else input$sexo_filter
+    mes_label <- if(input$mes_filter == "Todos") "Todos" else input$mes_filter
+    provincia_label <- if(input$provincia_filter == "Todas") "Todas" else input$provincia_filter
+    comuna_label <- if(input$comuna_filter == "Todas") "Todas" else input$comuna_filter
     
     crear_mapa(
       df_mapa = df_mapa,
@@ -1190,6 +1220,9 @@ server <- function(input, output, session) {
       valor_indicador = "% del total de EMP",
       grupo_etario_label = grupo_label,
       sexo_label = sexo_label,
+      mes_label = mes_label,
+      provincia_label = provincia_label,
+      comuna_label = comuna_label,
       titulo_leyenda = "% del total de EMP",
       label_indicador = "% del total de EMP",
       es_porcentaje = TRUE
