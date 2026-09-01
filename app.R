@@ -58,15 +58,6 @@ formatear_numero <- function(x) {
 }
 
 # =====================================================
-# FUNCIÓN PARA FORMATEAR PORCENTAJES
-# =====================================================
-
-formatear_porcentaje <- function(x) {
-  if(is.na(x) || is.null(x) || !is.finite(x)) return("0,0%")
-  paste0(format(round(x, 1), decimal.mark = ","), "%")
-}
-
-# =====================================================
 # ORDEN DE MESES (para usar en todo el dashboard)
 # =====================================================
 
@@ -367,8 +358,6 @@ crear_mapa <- function(df_mapa,
                        grupo_etario_label = "Todos",
                        sexo_label = "Ambos",
                        mes_label = "Todos",
-                       provincia_label = "Todas",
-                       comuna_label = "Todas",
                        titulo_leyenda = "Tasa x 100.000 hab.",
                        label_indicador = "Tasa",
                        es_porcentaje = FALSE) 
@@ -1227,8 +1216,6 @@ server <- function(input, output, session) {
     grupo_label <- if(input$grupo_etario_filter == "Todos") "Todos" else input$grupo_etario_filter
     sexo_label <- if(input$sexo_filter == "Todos") "Ambos sexos" else input$sexo_filter
     mes_label <- if(input$mes_filter == "Todos") "Todos" else input$mes_filter
-    provincia_label <- if(input$provincia_filter == "Todas") "Todas" else input$provincia_filter
-    comuna_label <- if(input$comuna_filter == "Todas") "Todas" else input$comuna_filter
     
     crear_mapa(
       df_mapa = df_mapa,
@@ -1240,8 +1227,6 @@ server <- function(input, output, session) {
       grupo_etario_label = grupo_label,
       sexo_label = sexo_label,
       mes_label = mes_label,
-      provincia_label = provincia_label,
-      comuna_label = comuna_label,
       titulo_leyenda = "% del total de EMP",
       label_indicador = "% del total de EMP",
       es_porcentaje = TRUE
