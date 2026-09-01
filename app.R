@@ -356,7 +356,7 @@ crear_mapa <- function(df_mapa,
                        codigo_comuna, nombre_comuna, provincia, 
                        valor, valor_indicador,
                        grupo_etario_label = "Todos",
-                       sexo_label = "Ambos",
+                       sexo_label = "Todos",
                        mes_label = "Todos",
                        titulo_leyenda = "Tasa x 100.000 hab.",
                        label_indicador = "Tasa",
@@ -427,23 +427,23 @@ crear_mapa <- function(df_mapa,
       )
   }
   
-  # Tooltip
+  # Tooltip - Orden estandarizado: Comuna -> Provincia -> Grupo Etario -> Mes -> Sexo -> Datos
   mapa_join <- mapa_join %>%
     mutate(
       text_label = case_when(
         !activa ~ paste0(
-          "<b>", nombre_comuna, "</b><br>",
+          "<b>Comuna: ", nombre_comuna, "</b><br>",
           "Provincia: ", ifelse(is.na(provincia), "Sin dato", provincia), "<br>",
-          "Mes: ", mes_label, "<br>",
           "Grupo Etario: ", grupo_etario_label, "<br>",
+          "Mes: ", mes_label, "<br>",
           "Sexo: ", sexo_label, "<br>",
           "Sin datos para los filtros seleccionados"
         ),
         TRUE ~ paste0(
-          "<b>", nombre_comuna, "</b><br>",
+          "<b>Comuna: ", nombre_comuna, "</b><br>",
           "Provincia: ", ifelse(is.na(provincia), "Sin dato", provincia), "<br>",
-          "Mes: ", mes_label, "<br>",
           "Grupo Etario: ", grupo_etario_label, "<br>",
+          "Mes: ", mes_label, "<br>",
           "Sexo: ", sexo_label, "<br>",
           "Total EMP: ", format(round(Total_EMP, 0), big.mark = ".", decimal.mark = ","), "<br>",
           "Tabaquismo: ", format(round(valor, 0), big.mark = ".", decimal.mark = ","), "<br>",
@@ -729,7 +729,8 @@ ui <- dashboardPage(
 )
 
 # =====================================================
-# SERVER# =====================================================
+# SERVER
+# =====================================================
 
 server <- function(input, output, session) {
   
@@ -956,6 +957,7 @@ server <- function(input, output, session) {
     }
     
     # Obtener etiquetas de filtros para el tooltip
+    grupo_label <- if(input$grupo_etario_filter == "Todos") "Todos" else input$grupo_etario_filter
     mes_label <- if(input$mes_filter == "Todos") "Todos" else input$mes_filter
     sexo_label <- if(input$sexo_filter == "Todos") "Todos" else input$sexo_filter
     provincia_label <- if(input$provincia_filter == "Todas") "Todas" else input$provincia_filter
@@ -1005,16 +1007,16 @@ server <- function(input, output, session) {
       mutate(
         Tooltip_Texto = paste0(
           "<b>Grupo Etario: ", grupo_etario, "</b><br>",
+          "Provincia: ", provincia_label, "<br>",
+          "Comuna: ", comuna_label, "<br>",
+          "Mes: ", mes_label, "<br>",
+          "Sexo: ", sexo_label, "<br>",
           "Total EMP: ", formatear_numero(Total_Grupo), "<br>",
           "Hombres EMP: ", formatear_numero(Hombres_Total), "<br>",
           "Mujeres EMP: ", formatear_numero(Mujeres_Total), "<br>",
           "Tabaquismo: ", formatear_numero(Hombres_Tabaquismo + Mujeres_Tabaquismo), "<br>",
           "Hombres Tabaquismo: ", formatear_numero(Hombres_Tabaquismo), "<br>",
-          "Mujeres Tabaquismo: ", formatear_numero(Mujeres_Tabaquismo), "<br>",
-          "Mes: ", mes_label, "<br>",
-          "Provincia: ", provincia_label, "<br>",
-          "Comuna: ", comuna_label, "<br>",
-          "Sexo: ", sexo_label
+          "Mujeres Tabaquismo: ", formatear_numero(Mujeres_Tabaquismo)
         )
       )
     
@@ -1088,10 +1090,11 @@ server <- function(input, output, session) {
     }
     
     # Obtener etiquetas de filtros para el tooltip
-    sexo_label <- if(input$sexo_filter == "Todos") "Todos" else input$sexo_filter
+    mes_label <- if(input$mes_filter == "Todos") "Todos" else input$mes_filter
     provincia_label <- if(input$provincia_filter == "Todas") "Todas" else input$provincia_filter
     comuna_label <- if(input$comuna_filter == "Todas") "Todas" else input$comuna_filter
     grupo_label <- if(input$grupo_etario_filter == "Todos") "Todos" else input$grupo_etario_filter
+    sexo_label <- if(input$sexo_filter == "Todos") "Todos" else input$sexo_filter
     
     datos_mensual <- datos %>%
       group_by(nombre_mes, sexo) %>%
@@ -1125,17 +1128,17 @@ server <- function(input, output, session) {
       ) %>%
       mutate(
         Tooltip_Texto = paste0(
-          "<b>", nombre_mes, "</b><br>",
+          "<b>Mes: ", nombre_mes, "</b><br>",
+          "Provincia: ", provincia_label, "<br>",
+          "Comuna: ", comuna_label, "<br>",
+          "Grupo Etario: ", grupo_label, "<br>",
+          "Sexo: ", sexo_label, "<br>",
           "Total EMP: ", formatear_numero(Total_Mes), "<br>",
           "Hombres EMP: ", formatear_numero(Hombres_Total), "<br>",
           "Mujeres EMP: ", formatear_numero(Mujeres_Total), "<br>",
           "Tabaquismo: ", formatear_numero(Hombres_Tabaquismo + Mujeres_Tabaquismo), "<br>",
           "Hombres Tabaquismo: ", formatear_numero(Hombres_Tabaquismo), "<br>",
-          "Mujeres Tabaquismo: ", formatear_numero(Mujeres_Tabaquismo), "<br>",
-          "Provincia: ", provincia_label, "<br>",
-          "Comuna: ", comuna_label, "<br>",
-          "Sexo: ", sexo_label, "<br>",
-          "Grupo Etario: ", grupo_label
+          "Mujeres Tabaquismo: ", formatear_numero(Mujeres_Tabaquismo)
         )
       )
     
@@ -1214,7 +1217,7 @@ server <- function(input, output, session) {
     }
     
     grupo_label <- if(input$grupo_etario_filter == "Todos") "Todos" else input$grupo_etario_filter
-    sexo_label <- if(input$sexo_filter == "Todos") "Ambos sexos" else input$sexo_filter
+    sexo_label <- if(input$sexo_filter == "Todos") "Todos" else input$sexo_filter
     mes_label <- if(input$mes_filter == "Todos") "Todos" else input$mes_filter
     
     crear_mapa(
@@ -1347,7 +1350,7 @@ server <- function(input, output, session) {
       df_resumen <- datos_resumen()
       df_resumen_provincia <- datos_resumen_provincia()
       
-      # Detalle por sexo y grupo
+      # Detalle por sexo y grupo (con nombres en formato oración)
       df_detalle_etario <- df %>%
         group_by(sexo, grupo_etario) %>%
         summarise(
@@ -1363,7 +1366,7 @@ server <- function(input, output, session) {
           `Grupo Etario` = grupo_etario
         )
       
-      # Detalle por mes y sexo
+      # Detalle por mes y sexo (con nombres en formato oración)
       df_detalle_mes <- df %>%
         group_by(nombre_mes, sexo) %>%
         summarise(
@@ -1395,6 +1398,22 @@ server <- function(input, output, session) {
         )
       )
       
+      # Resumen por comuna - ELIMINAR codigo_comuna y estandarizar nombres
+      df_resumen_nombres <- df_resumen %>%
+        select(-codigo_comuna) %>%
+        rename(
+          `Nombre Provincia` = nombre_provincia,
+          `Nombre Comuna` = nombre_comuna,
+          `Total EMP` = Total_EMP
+        )
+      
+      # Resumen por provincia - estandarizar nombres
+      df_resumen_provincia_nombres <- df_resumen_provincia %>%
+        rename(
+          `Nombre Provincia` = nombre_provincia,
+          `Total EMP` = Total_EMP
+        )
+      
       # Metadatos
       metadatos <- data.frame(
         Campo = c(
@@ -1423,10 +1442,10 @@ server <- function(input, output, session) {
       writeData(wb, "Metadatos", metadatos)
       
       addWorksheet(wb, "Resumen por Comuna")
-      writeData(wb, "Resumen por Comuna", df_resumen)
+      writeData(wb, "Resumen por Comuna", df_resumen_nombres)
       
       addWorksheet(wb, "Resumen por Provincia")
-      writeData(wb, "Resumen por Provincia", df_resumen_provincia)
+      writeData(wb, "Resumen por Provincia", df_resumen_provincia_nombres)
       
       addWorksheet(wb, "Resumen Tarjetas")
       writeData(wb, "Resumen Tarjetas", resumen_tarjetas)
