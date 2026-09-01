@@ -700,12 +700,12 @@ ui <- dashboardPage(
                         tags$ul(style = "text-align: left; display: inline-block; margin: 10px auto;",
                                 tags$li(strong("Metadatos"), 
                                         " - Información sobre filtros aplicados y fecha de corte"),
-                                tags$li(strong("Resumen por Comuna"), 
-                                        " - Datos resumen por comuna"),
-                                tags$li(strong("Resumen por Provincia"), 
-                                        " - Datos resumen por provincia y regional"),
                                 tags$li(strong("Resumen Tarjetas"), 
                                         " - Valores de las tarjetas del dashboard"),
+                                tags$li(strong("Resumen por Provincia"), 
+                                        " - Datos resumen por provincia y regional"),
+                                tags$li(strong("Resumen por Comuna"), 
+                                        " - Datos resumen por comuna"),
                                 tags$li(strong("Detalle por Sexo y Grupo Etario"), 
                                         " - Datos desagregados por sexo y grupo etario"),
                                 tags$li(strong("Detalle por Mes y Sexo"), 
@@ -1350,7 +1350,7 @@ server <- function(input, output, session) {
       df_resumen <- datos_resumen()
       df_resumen_provincia <- datos_resumen_provincia()
       
-      # Detalle por sexo y grupo (con nombres en formato oración)
+      # Detalle por sexo y grupo
       df_detalle_etario <- df %>%
         group_by(sexo, grupo_etario) %>%
         summarise(
@@ -1366,7 +1366,7 @@ server <- function(input, output, session) {
           `Grupo Etario` = grupo_etario
         )
       
-      # Detalle por mes y sexo (con nombres en formato oración)
+      # Detalle por mes y sexo
       df_detalle_mes <- df %>%
         group_by(nombre_mes, sexo) %>%
         summarise(
@@ -1398,7 +1398,7 @@ server <- function(input, output, session) {
         )
       )
       
-      # Resumen por comuna - ELIMINAR codigo_comuna y estandarizar nombres
+      # Resumen por comuna - ESTANDARIZADO
       df_resumen_nombres <- df_resumen %>%
         select(-codigo_comuna) %>%
         rename(
@@ -1407,7 +1407,7 @@ server <- function(input, output, session) {
           `Total EMP` = Total_EMP
         )
       
-      # Resumen por provincia - estandarizar nombres
+      # Resumen por provincia - ESTANDARIZADO
       df_resumen_provincia_nombres <- df_resumen_provincia %>%
         rename(
           `Nombre Provincia` = nombre_provincia,
@@ -1438,17 +1438,18 @@ server <- function(input, output, session) {
       
       wb <- createWorkbook()
       
+      # ORDEN: Metadatos -> Tarjetas -> Provincia -> Comuna -> Detalles
       addWorksheet(wb, "Metadatos")
       writeData(wb, "Metadatos", metadatos)
       
-      addWorksheet(wb, "Resumen por Comuna")
-      writeData(wb, "Resumen por Comuna", df_resumen_nombres)
+      addWorksheet(wb, "Resumen Tarjetas")
+      writeData(wb, "Resumen Tarjetas", resumen_tarjetas)
       
       addWorksheet(wb, "Resumen por Provincia")
       writeData(wb, "Resumen por Provincia", df_resumen_provincia_nombres)
       
-      addWorksheet(wb, "Resumen Tarjetas")
-      writeData(wb, "Resumen Tarjetas", resumen_tarjetas)
+      addWorksheet(wb, "Resumen por Comuna")
+      writeData(wb, "Resumen por Comuna", df_resumen_nombres)
       
       addWorksheet(wb, "Detalle por Sexo y Grupo")
       writeData(wb, "Detalle por Sexo y Grupo", df_detalle_etario)
